@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30-Day Habit Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div id="app"></div>
+
+    <script>
+        // Data structure
+        let habitData = {};
+        let currentView = 'calendar';
+        let selectedDay = 1;
+
+        // Initialize data
+        function initializeData() {
+            const data = {};
+            for (let i = 1; i <= 30; i++) {
+                data[i] = {
+                    exercise: false,
+                    mindfulness: false,
+                    pelvicFloor: false,
+                    fascia: false,
+                    dbt: false,
+                    eatingGreen: 2,
+                    protein: 3,
+                    entered: false
+                };
+            }
+            return data;
+        }
+
+        // Load data from localStorage or initialize
+        function loadData() {
+            const saved = localStorage.getItem('habitTrackerData');
+            if (saved) {
+                habitData = JSON.parse(saved);
+            } else {
+                habitData = initializeData();
+            }
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('habitTrackerData', JSON.stringify(habitData));
+        }
+
+        // Calculate total for a day
+        function calculateDayTotal(day) {
+            const data = habitData[day];
+            let total = 0;
+            if (data.exercise) total += 1;
+            if (data.mindfulness) total += 1;
+            if (data.pelvicFloor) total += 1;
+            if (data.fascia) total += 1;
+            if (data.dbt) total += 1;
+            total += data.eatingGreen;
+            total += data.protein;
+            return total;
+        }
+
+        // Calculate total score
+        function calculateTotalScore() {
+            let total = 0;
+            for (let i = 1; i <= 30; i++) {
+                total += calculateDayTotal(i);
+            }
+            return total;
+        }
+
+        // Update habit
+        function updateHabit(day, habit, value) {
+            habitData[day][habit] = value;
+            habitData[day].entered = true;
+            saveData();
+            render();
+        }
+
+        // Reset tracker
+        function resetTracker() {
+            if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+                const newData = {};
+                for (let i = 1; i <= 30; i++) {
+                    newData[i] = {
+                        exercise: false,
+                        mindfulness: false,
+                        pelvicFloor: false,
+                        fascia: false,
+                        dbt: false,
+                        eatingGreen: 0,
+                        protein: 0,
+                        entered: false
+                    };
+                }
+                habitData = newData;
+                saveData();
+                currentView = 'calendar';
+                selectedDay = 1;
+                render();
+                alert('Tracker has been reset!');
+            }
+        }
+
+        // Render calendar view
+        function renderCalendar() {
+            const totalScore = calculateTotalScore();
+            let html = `
+                <div class="p-6">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="bg-white rounded-xl shadow-lg p-8">
+                            <div class="flex justify-between items-center mb-8">
+                                <h1 class="text-3xl font-bold text-gray-800">30-Day Habit Tracker</h1>
+                            </div>
+                            
+                            <div class="mb-6 p-4 bg-indigo-50 rounded-lg">
+                                <div class="text-2xl font-bold text-indigo-700">
+                                    Total Score: ${totalScore} / 300
+                                </div>
+                                <div class="text-sm text-gray-600 mt-1">Daily Goal: 10 points | Perfect Score: 300</div>
+                            </div>
+
+                            <div class="grid grid-cols-5 gap-4 mb-4">
+            `;
+
+            for (let day = 1; day <= 30; day++) {
+                const total = calculateDayTotal(day);
+                const isEntered = habitData[day].entered;
+                let bgColor = 'bg-gray-300';
+                if (isEntered) {
+                    bgColor = total >= 7 ? 'bg-green-500' : 'bg-orange-400';
+                }
+                
+                html += `
+                    <button onclick="showDay(${day})" 
+                            class="${bgColor} text-white rounded-lg p-4 hover:opacity-80 transition shadow-md cursor-pointer">
+                        <div class="text-sm font-semibold">Day ${day}</div>
+                        <div class="text-2xl font-bold">${total}</div>
+                    </button>
+                `;
+            }
+
+            html += `
+                            </div>
+
+                            <div class="mt-6 flex gap-4 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-4 h-4 bg-green-500 rounded"></div>
+                                    <span>7+ points</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-4 h-4 bg-orange-400 rounded"></div>
+                                    <span>&lt;7 points</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-4 h-4 bg-gray-300 rounded"></div>
+                                    <span>Not entered</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 pt-6 border-t">
+                                <button onclick="resetTracker()"
+                                        class="w-full px-6 py-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition cursor-pointer font-semibold text-lg">
+                                    🔄 Reset All Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
+        // Render day view
+        function renderDay() {
+            const data = habitData[selectedDay];
+            const total = calculateDayTotal(selectedDay);
+
+            let html = `
+                <div class="p-6">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="bg-white rounded-xl shadow-lg p-8">
+                            <div class="flex justify-between items-center mb-6">
+                                <button onclick="showCalendar()" 
+                                        class="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 cursor-pointer">
+                                    📅 Back to Calendar
+                                </button>
+                                <div class="text-xl font-bold text-gray-800">Day ${selectedDay}</div>
+                            </div>
+
+                            <div class="mb-6 p-4 bg-indigo-50 rounded-lg">
+                                <div class="text-2xl font-bold text-indigo-700">
+                                    Today's Score: ${total} / 10
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+            `;
+
+            // Yes/No habits
+            const yesNoHabits = [
+                { key: 'exercise', label: 'Exercise' },
+                { key: 'mindfulness', label: 'Mindfulness or Yoga' },
+                { key: 'pelvicFloor', label: 'Pelvic Floor and Core' },
+                { key: 'fascia', label: 'Fascia and Stretching' },
+                { key: 'dbt', label: 'DBT Review for 10 Minutes' }
+            ];
+
+            yesNoHabits.forEach(habit => {
+                const checked = data[habit.key];
+                html += `
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-medium text-gray-700">${habit.label}</span>
+                        <button onclick="updateHabit(${selectedDay}, '${habit.key}', ${!checked})"
+                                class="w-12 h-12 rounded-lg font-bold text-lg transition cursor-pointer ${
+                                    checked ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
+                                }">
+                            ${checked ? '✓' : '○'}
+                        </button>
+                    </div>
+                `;
+            });
+
+            // Eating Green
+            html += `
+                <div class="border-t pt-4">
+                    <div class="font-semibold text-gray-700 mb-3">Eating Green (Max 2 points)</div>
+                    <div class="flex gap-3">
+            `;
+            
+            const eatingOptions = [
+                { val: 2, label: 'Under 200 cal (2)' },
+                { val: 1, label: '200 cal over (1)' },
+                { val: 0, label: '200+ over (0)' }
+            ];
+
+            eatingOptions.forEach(opt => {
+                const isSelected = data.eatingGreen === opt.val;
+                html += `
+                    <button onclick="updateHabit(${selectedDay}, 'eatingGreen', ${opt.val})"
+                            class="px-6 py-3 rounded-lg font-semibold transition cursor-pointer ${
+                                isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }">
+                        ${opt.label}
+                    </button>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            // Protein
+            html += `
+                <div class="border-t pt-4">
+                    <div class="font-semibold text-gray-700 mb-3">Protein Levels (Max 3 points)</div>
+                    <div class="flex gap-3 flex-wrap">
+            `;
+
+            const proteinOptions = [
+                { val: 3, label: '90g+ (3)' },
+                { val: 2, label: '80-89g (2)' },
+                { val: 1, label: '70-79g (1)' },
+                { val: 0, label: '<70g (0)' }
+            ];
+
+            proteinOptions.forEach(opt => {
+                const isSelected = data.protein === opt.val;
+                html += `
+                    <button onclick="updateHabit(${selectedDay}, 'protein', ${opt.val})"
+                            class="px-6 py-3 rounded-lg font-semibold transition cursor-pointer ${
+                                isSelected ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }">
+                        ${opt.label}
+                    </button>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+                            </div>
+
+                            <div class="flex justify-between mt-8 pt-6 border-t">
+                                <button onclick="previousDay()" ${selectedDay === 1 ? 'disabled' : ''}
+                                        class="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer">
+                                    ← Previous Day
+                                </button>
+                                <button onclick="nextDay()" ${selectedDay === 30 ? 'disabled' : ''}
+                                        class="flex items-center gap-2 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer">
+                                    Next Day →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
+        // Show calendar
+        function showCalendar() {
+            currentView = 'calendar';
+            render();
+        }
+
+        // Show day
+        function showDay(day) {
+            selectedDay = day;
+            currentView = 'day';
+            render();
+        }
+
+        // Previous day
+        function previousDay() {
+            if (selectedDay > 1) {
+                selectedDay--;
+                render();
+            }
+        }
+
+        // Next day
+        function nextDay() {
+            if (selectedDay < 30) {
+                selectedDay++;
+                render();
+            }
+        }
+
+        // Main render function
+        function render() {
+            const app = document.getElementById('app');
+            if (currentView === 'calendar') {
+                app.innerHTML = renderCalendar();
+            } else {
+                app.innerHTML = renderDay();
+            }
+        }
+
+        // Initialize on load
+        loadData();
+        render();
+    </script>
+</body>
+</html>
